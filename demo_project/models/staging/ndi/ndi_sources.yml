@@ -1,0 +1,28 @@
+version: 2
+
+
+sources:
+  - name: "National Death Index"
+    description: "Dates and causes of death for a subset of CEHDR registry patients sourced from the CDC National Death Index"
+    tags: ['ndi', 'cehdr', 'registry', 'mortality']
+    meta:
+      owner: MCvitano01@jpshealth.org
+
+    tables:
+      - name: ndi_matches
+        description: "One record per-patient; Includes only presumed matches based on NDI recommended probability thresholds"
+        tags: ['mortality']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+            tests:
+              - unique
+              - not_null
+          - name: NDI_DEATH_DATE
+            description: "Date of death"
+          - name: NDI_EXACT_MATCH
+            description: "Indicator of whether an exact match was found [Y, N]"
+          - name: NDI_PROB_SCORE
+            description: "Estimated probability of a match"
+        meta:
+          external_location: "read_parquet('../raw_data/ndi/ndi')"

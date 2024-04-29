@@ -1,0 +1,8 @@
+dbt_packages/
+logs/
+target/
+# exclude all data
+raw_data/
+demo_project/dev.duckdb
+# no reason to include VS Code workspace (convenience)
+dbt_duckdb.code-workspace

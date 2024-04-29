@@ -1,0 +1,135 @@
+
+version: 2
+  
+sources:
+  - name: "Substance Use Disorder Registry"
+    description: "Patients with a substance use disorder documented via one or more clinical/encounter diagnosis codes or medication orders for buprenorphine or ED-initiated naloxone."
+    tags: ['cehdr', 'registry']
+    freshness:
+      error_after: {count: 30, period: day}
+    loaded_at_field: LOADED_AT
+    #meta:
+    #  owner: MCvitano01@jpshealth.org
+      # no parititioning of parquet files
+      #external_location: "read_parquet('../raw_data/substance_use_{name}')"
+
+    tables:
+      - name: bridge_enrollment
+        description: "One record per-patient interacting with the ED-bridge clinic."
+        tags: ['substance use', 'opioid']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+          - name: ENROLL_STATUS_NAME
+            description: "Current bridge enrollment status"
+            tests:
+              - accepted_values:
+                  values: ['Interested', 'Declined', 'Ineligible - did not meet full criteria',
+                           'Enrolled', 'Withdrawn', 'Completed']
+          - name: ENROLL_START_DT
+            description: "Start date of most recent treatment episode, initial contact, or refusal of treatment"
+          - name: ENROLL_END_DT
+            description: "End date of most recent treatment episode, initial contact, or refusal of treatment"
+        meta:
+          external_location: "read_parquet('../raw_data/substance_use_registry/bridge_enrollment')"
+
+      - name: diagnoses
+        description: "Clinician-documented diagnosis codes (ICD10-CM); Does not include those entered by medical coders."
+        tags: ['substance use', 'diagnoses']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+          - name: PAT_ENC_CSN_ID
+            description: "Unique encounter identifier (not a primary key; Potentially a 1:many relation with diagnoses)"
+          - name: CONTACT_DATE
+            description: "Date of encounter"
+          - name: CURRENT_ICD10_LIST
+            description: "Diagnosis code(s); ICD10-CM"
+          - name: DX_NAME
+            description: "Text description of diagnosis code(s)"
+        meta:
+          external_location: "read_parquet('../raw_data/substance_use_registry/diagnoses/*/diagnoses', hive_partitioning=True, union_by_name=True)"
+
+      - name: encounters
+        description: "One record per-encounter (interaction with EHR)."
+        tags: ['substance use']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+          - name: HSP_ACCOUNT_ID
+          - name: PAT_ENC_CSN_ID
+          - name: CONTACT_DATE
+          - name: YEAR
+          - name: ENC_TYPE_NM
+          - name: DEPARTMENT_NAME
+          - name: DEPARTMENT_SPECIALTY
+          - name: APPT_TIME
+          - name: APPT_STATUS_NM
+          - name: RSN_FOR_VISIT_LIST
+          - name: OTHER_RSN_LIST
+          - name: ADT_ARRIVAL_TIME
+          - name: HOSP_ADMSN_TIME
+          - name: INP_ADM_DATE
+          - name: OP_ADM_DATE
+          - name: EMER_ADM_DATE
+          - name: HOSP_DISCH_TIME
+          - name: TOT_CHGS
+          - name: VISIT_PROV_ID
+          - name: PCP_PROV_ID
+          - name: ADMISSION_PROV_ID
+          - name: BILL_ATTEND_PROV_ID
+          - name: PRODUCT_TYPE_NM
+          - name: PAYOR_NAME
+        meta:
+          # 1-level of hive-partitioning (YEAR)
+          # union_by_name=True --> By default, the schema information is taken from the first Parquet file
+          #                         and since this info may be null for some field(s) we need give duckdb some
+          #                         advice as to what the schema is (or we could manually specify it)
+          external_location: "read_parquet('../raw_data/substance_use_registry/encounters/*/encounters', hive_partitioning=True, union_by_name=True)"
+
+      - name: medications
+        description: 'Orders for medication assisted treatment for opioid use disorder (Burprenorphine/Suboxone, Naloxone).'
+        tags: ['substance use', 'treatment']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+          - name: PAT_ENC_CSN_ID
+          - name: ORDER_INST
+          - name: ORDERING_MODE_NM
+          - name: ORDER_STATUS_NM
+          - name: ORDER_CLASS_NM
+          - name: ORDERING_PROV_LOGIN
+          - name: PATIENT_LOC_AT_ORDER
+          - name: ATC_CODE
+          - name: ATC_TITLE
+          - name: START_DATE
+          - name: END_DATE
+          - name: DISCON_TIME
+        meta:
+          # 1-level of hive-partitioning (YEAR)
+          # union_by_name=True --> By default, the schema information is taken from the first Parquet file
+          #                         and since this info may be null for some field(s) we need give duckdb some
+          #                         advice as to what the schema is (or we could manually specify it)
+          external_location: "read_parquet('../raw_data/substance_use_registry/medications/*/medications', hive_partitioning=True, union_by_name=True)"
+
+      - name: patients
+        description: "Patient demographics."
+        tags: ['substance use', 'demographics']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+          - name: BIRTH_DATE
+            description: "Date of birth"
+          - name: PAT_SEX
+            description: "Sex"
+          - name: ETHNIC_GROUP_NM
+            description: "Ethnicity"
+          - name: PATIENT_RACE
+            description: "Race; Multi-valued entries are listed in alphabetical order"
+          - name: LANGUAGE_NM
+            description: "Preferred/primary language"
+          - name: MARITAL_STATUS_NM
+            description: "Relationship status"
+        meta:
+          #contains_pii: true
+          external_location: "read_parquet('../raw_data/substance_use_registry/patients')"

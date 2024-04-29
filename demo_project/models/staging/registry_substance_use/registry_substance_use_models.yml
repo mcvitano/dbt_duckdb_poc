@@ -1,0 +1,80 @@
+
+version: 2
+
+models:
+  - name: reg_sud_patients
+    description: "Patient demographics"
+    tags: ['substance use', 'demographics']
+    columns:
+      - name: PAT_ID
+        description: "Unique patient identifier (primary key); Value does not represent a medical record number"
+        tests:
+          - unique
+          - not_null
+      - name: BIRTH_DATE
+        description: "Date of birth"
+      - name: AGE_YRS
+        description: "Current age (in years) as of SOURCE_DATE"
+      - name: SEX
+        description: "Sex [Male, Female, Unknown]"
+      - name: RACETH
+        description: "Race/Ethnicity [Hispanic, NH Black, NH White, NH Other, Unknown]"
+      - name: LANGUAGE_PRIMARY
+        description: "Preferred/primary language [American Sign Language, English, Spanish, Other, Unknown]"
+      - name: RELATIONSHIP_STATUS
+        description: "Relationship status [In a relationship, Single, Other, Unknown]"
+
+  - name: reg_sud_diagnoses
+    description: "One record per substance, per encounter."
+    tags: ['substance use', 'diagnoses']
+    columns:
+      - name: PAT_ID
+        description: "Unique patient identifier; Value does not represent a medical record number"
+      - name: PAT_ENC_CSN_ID
+        description: "Unique encounter identifier; Potentially a 1:many relation with diagnoses"
+      - name: CONTACT_DATE
+        description: "Date of encounter"
+      - name: ICD10
+        description: "Diagnosis code(s)"
+      - name: SUBSTANCE_TYPE
+        description: "Substance use disorder referred to by ICD10 [Alcohol, Cannabis, Cocaine, Hallucinogen, Inhalant, Methamphetamine, Nicotine, Opioid, Sedative, Other_stimulant, Other_psychoactive]"
+      - name: OVERDOSE_YN
+        description: "Accidental or undetermined poisoning or adverse effect of substance [Y, N]"
+
+  - name: reg_sud_encounters
+    #description:
+    #tags: ['substance use', 'admissions', 'appointments']
+    columns:
+      - name: PAT_ID
+        description: "Unique patient identifier; Value does not represent a medical record number"
+      - name: HSP_ACCOUNT_ID
+      - name: PAT_ENC_CSN_ID
+      - name: CONTACT_DATE
+      - name: DAY_OF_WEEK
+      - name: YEAR
+      - name: ENC_TYPE_NM
+      - name: FACE_TO_FACE_FLAG
+      - name: TELEHEALTH_FLAG
+      - name: DEPARTMENT_NAME
+      - name: DEPARTMENT_SPECIALTY
+      - name: PCMH_PARENT
+      - name: APPT_TIME
+      - name: APPT_STATUS_NM
+      - name: RSN_FOR_VISIT_LIST
+      - name: OTHER_RSN_LIST
+      - name: ADT_ARRIVAL_TIME
+      - name: HOSP_ADMSN_TIME
+      - name: INP_ADM_DATE
+      - name: OP_ADM_DATE
+      - name: EMER_ADM_DATE
+      - name: HOSP_DISCH_TIME
+      - name: HOSP_LOS_MINS
+      - name: HOSP_LOS_HRS
+      - name: HOSP_LOS_DAYS
+      - name: LEFT_BEFORE_ROOMED_FLAG
+      - name: TOT_CHGS
+      - name: VISIT_PROV_ID
+      - name: PCP_PROV_ID
+      - name: ADMISSION_PROV_ID
+      - name: BILL_ATTEND_PROV_ID
+      - name: INSURANCE_CLASS

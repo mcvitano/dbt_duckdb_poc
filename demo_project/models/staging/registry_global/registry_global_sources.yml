@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: "Global Registry"
+    description: ""
+    tags: ['cehdr', 'registry']
+
+    tables:
+      - name: pcmh_visits_denominators_2018_2023
+        description: "One record per-patient, per-PCMH, per-year; Includes only completed visits at the main clinic (CHC)"
+        tags: ['pcmh', 'appointments']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+          - name: PAT_ENC_CSN_ID
+            description: "Unique encounter identifier"
+          - name: CONTACT_DATE
+            description: "Date of encounter"
+          - name: DEPARTMENT_NAME
+            description: "Name of PCMH clinic"
+          - name: RACETH
+            description: "Race/Ethnicity"
+        meta:
+          external_location: "read_parquet('../raw_data/global_registry/pcmh_visits_denominators_2018_2023')"

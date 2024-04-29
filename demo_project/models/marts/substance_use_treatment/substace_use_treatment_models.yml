@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: outpatient_based_opioid_treatment
+    #description:
+    #tags: ['substance use', 'opioid', 'treatment', 'appointments']
+    columns:
+      - name: PAT_ID
+        description: "Unique patient identifier; Value does not represent a medical record number"
+      - name: PAT_ENC_CSN_ID
+        description: "Unique encounter identifier"
+      - name: CONTACT_DATE
+      - name: DAY_OF_WEEK
+      - name: YEAR
+      - name: APPT_TIME
+      - name: APPT_STATUS_NM
+      - name: RSN_FOR_VISIT_LIST
+      - name: OTHER_RSN_LIST
+      - name: INSURANCE_CLASS
+      - name: EMER_ADM_DATE
+      - name: EMER_HOSPITALIZED_YN
+      - name: EMER_DISCH_TIME
+      - name: EMER_RSN_VISIT
+      - name: EMER_RSN_OTHER
+      - name: BRIDGE_STATUS
+      - name: BRIDGE_START_DATE
+      - name: BRIDGE_END_DATE
