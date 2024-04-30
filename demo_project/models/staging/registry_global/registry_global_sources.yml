@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: "Global Registry"
-    description: ""
+    #description: ""
     tags: ['cehdr', 'registry']
 
     tables:
@@ -22,3 +22,22 @@ sources:
             description: "Race/Ethnicity"
         meta:
           external_location: "read_parquet('../raw_data/global_registry/pcmh_visits_denominators_2018_2023')"
+
+      - name: providers
+        description: "One record per-provider ID"
+        tags: ['providers']
+        columns:
+          - name: PROV_ID
+            description: "Provider identifier; Value may not represent a unique provider (e.g., a 'resource' such as an external health facility)"
+          - name: PROV_TYPE
+            description: "Type of provider"
+          - name:  PROV_NAME
+            description: "Name of provider"
+          - name: SEX
+            description: "Sex of provider"
+          - name: ACTIVE_STATUS
+            description: "Binary indicator of whether a provider ID is considered 'active'"
+          - name: SPECIALTY_LIST
+            description: "One or more specialties associated with a provider ID"
+        meta:
+          external_location: "read_parquet('../raw_data/global_registry/providers')"

@@ -1,35 +1,54 @@
-
-# Name your project! Project names should contain only lowercase characters
-# and underscores. A good package name should reflect your organization's
-# name or the intended use of these models
 name: 'demo_project'
 version: '1.0.0'
 config-version: 2
 
-# This setting configures which "profile" dbt uses for this project.
 profile: 'demo_project'
 
-# These configurations specify where dbt should look for different types of files.
-# The `model-paths` config, for example, states that models in this project can be
-# found in the "models/" directory. You probably won't need to change these!
-model-paths: ["models"]             # see https://docs.getdbt.com/docs/collaborate/documentation
-                                    # see https://docs.getdbt.com/docs/build/sources
-analysis-paths: ["analyses"]
-test-paths: ["tests"]               # see https://docs.getdbt.com/reference/artifacts/other-artifacts
-seed-paths: ["seeds"]
-macro-paths: ["macros"]
-snapshot-paths: ["snapshots"]
 
-clean-targets:         # directories to be removed by `dbt clean`
+####################################
+# Where will dbt look for my files?
+#
+####################################
+model-paths: ["models"]
+# python models now allowed         see https://docs.getdbt.com/docs/build/python-models
+#
+# doc blocks                        defined in a .md file (anywhere) using
+#                                     {% docs __name__ %} ... {% enddocs %}
+#                                   injected into documentation using
+#                                     {{ doc("__name__") }}
+#
+# docs overview                     can be overwritten using
+#                                     {% docs __overview__ %} ... {% enddocs %}
+analysis-paths: ["analyses"]        # compiled to SQL for use elsehwere (not materialized)
+test-paths: ["tests"]               
+# 1. Data tests (post-run)          see https://docs.getdbt.com/docs/build/data-tests
+# 2. Unit tests (pre-run)           see https://docs.getdbt.com/docs/build/unit-tests
+seed-paths: ["seeds"]               # should be < 1 MB
+macro-paths: ["macros"]             # custom SQL functions
+snapshot-paths: ["snapshots"]       # used for SCDs when source does not track history
+
+
+##################################################################
+# What are all these files in the test/ directory?
+#
+# see https://docs.getdbt.com/reference/artifacts/other-artifacts
+##################################################################
+
+
+################################################
+# Which directories are removed by `dbt clean`?
+#
+################################################
+clean-targets:
   - "target"
   - "dbt_packages"
+  
 
+######################################################
 # Configuring models
-# Full documentation: https://docs.getdbt.com/docs/configuring-models
-
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
+#
+# see https://docs.getdbt.com/docs/configuring-models
+######################################################
 models:
   demo_project:
     # Config indicated by + and applies to all files under models/staging/

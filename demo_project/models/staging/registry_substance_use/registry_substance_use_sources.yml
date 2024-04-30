@@ -94,17 +94,25 @@ sources:
           - name: PAT_ID
             description: "Unique patient identifier; Value does not represent a medical record number"
           - name: PAT_ENC_CSN_ID
+            description: "Unique encounter identifier"
           - name: ORDER_INST
+            description: "Datetime of order (when the medication was documented in EHR); For 'Historical Meds' (see ORDER_CLASS_NM) the START_DATE may precede the datetime of the order"
           - name: ORDERING_MODE_NM
+            description: "Ordering mode of the order [inpatient, outpatient, NULL]; Inpatient mode indicates that the provider had planned to provider the medication to the patient during the encounter where as Outpatient mode is indicates that the medication was sent to a pharmacy (thus, outpatient mode is consistent with casual use of the term 'prescription')"
           - name: ORDER_STATUS_NM
           - name: ORDER_CLASS_NM
           - name: ORDERING_PROV_LOGIN
           - name: PATIENT_LOC_AT_ORDER
           - name: ATC_CODE
-          - name: ATC_TITLE
+            description: "Anatomical Therapeutic Chemical (ATC) Classification; Codes are maintained by the World Health Organization (WHO)"
+          - name: ATC_TITLE:
+            description: "Standardized name of medication used by ATC classification (e.g., disregards differences in route, dose, and frequency)"
           - name: START_DATE
+            description: "Date medication use was to be begin; For Outpatient mode (ORDERING_MODE_NM) the start date is defined by the order rather than when the patient actually received (e.g., ingested) the medication; For 'Historical Meds' (ORDER_CLASS_NM) the start date may precede the datetime of the order"
           - name: END_DATE
+            description: "Date medication use was to end"
           - name: DISCON_TIME
+            description: 
         meta:
           # 1-level of hive-partitioning (YEAR)
           # union_by_name=True --> By default, the schema information is taken from the first Parquet file

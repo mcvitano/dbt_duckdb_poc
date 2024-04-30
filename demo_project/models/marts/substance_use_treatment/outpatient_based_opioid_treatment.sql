@@ -32,14 +32,15 @@ bridge_enrollment as (
 ),
 bup_orders as (
     SELECT PAT_ID, 
-        ORDER_DATE AS BUP_PREVIOUS_DATE
-    FROM source('Substance Use Disorder Registry', 'medication_orders')
-    WHERE ATC_CODE IN (N07BC51, N07BC01)
+        ORDER_INST AS BUP_PREVIOUS_TIME
+    FROM {{ ref('reg_sud_medication_orders') }}
+    WHERE ATC_CODE IN ('N07BC51', 'N07BC01')
 ),
 merged_one_to_many as (
     SELECT obot.PAT_ID, obot.PAT_ENC_CSN_ID, DAY_OF_WEEK, YEAR,
         APPT_TIME, APPT_STATUS_NM, RSN_FOR_VISIT_LIST, OTHER_RSN_LIST,
         INSURANCE_CLASS,
+        BUP_PREVIOUS_TIME,
         EMER_ADM_DATE, EMER_HOSPITALIZED_YN, EMER_DISCH_TIME,
         EMER_RSN_VISIT, EMER_RSN_OTHER,
         BRIDGE_STATUS, BRIDGE_START_DATE, BRIDGE_END_DATE,
@@ -53,13 +54,13 @@ merged_one_to_many as (
         ON obot.PAT_ID = bup.PAT_ID
     WHERE 1=1
         AND ed.EMER_ADM_DATE < obot.APPT_TIME
-        AND bup.BUP_PREVIOUS_DATE < obot.APPT_TIME
+        AND bup.BUP_PREVIOUS_TIME < obot.APPT_TIME
 )
 -- keep single (previous) ED visit per-OBOT encounter (in case multiple)
 SELECT PAT_ID, PAT_ENC_CSN_ID, DAY_OF_WEEK, YEAR,
         APPT_TIME, APPT_STATUS_NM, RSN_FOR_VISIT_LIST, OTHER_RSN_LIST,
         INSURANCE_CLASS,
-        BUP_PREVIOUS_DATE,
+        BUP_PREVIOUS_TIME,
         EMER_ADM_DATE, EMER_HOSPITALIZED_YN, EMER_DISCH_TIME,
         EMER_RSN_VISIT, EMER_RSN_OTHER,
         BRIDGE_STATUS, BRIDGE_START_DATE, BRIDGE_END_DATE
