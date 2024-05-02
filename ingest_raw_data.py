@@ -3,9 +3,32 @@ import pandas as pd
 import argparse
 from pathlib import Path
 from datetime import date
+import os
+import load_dotenv
 import warnings
 
+from pipeline_utils import pipeline_dict
 
+# Currently implemented as a monolithic script but should be broken into reuseable parts.
+# Perhaps using a dictionary along the lines of:
+#   {registry : {table: {sql: "SELECT * FROM ...", 
+#                partition_on: [None, columns] } 
+#               }
+#   }
+
+# The dlt module was investigated as more fluid option but turned out to be a pain.
+# The module worked great for reading from the source data based --> duckdb file
+#   but would not output to parquet. The pipeline would run with "no errors" and 
+#   supposedly output the specified dataset ... but nothing ever materialized.
+# In addition, dlt saves a ton of metadata (and copies of pipeline runs) that is not
+#   needed for this demo (or even a production-level version). And the documentaion
+#   is poorly organized with a ton of overlapping partial, non-runnable "examples". 
+
+
+load_dotenv()
+driver = os.getenv('DRIVER')
+database = os.getenv('DATABASE')
+host = os.getenv('HOST')
 
 def _read_query_to_parquet(sql, table, connection, output_dir, partition_cols=None):
         df = pd.read_sql(sql=sql, con=connection)
@@ -39,7 +62,7 @@ def ingest_raw_data(source, table, current_year_yn):
     # Ignore pandas warning/preference for SQL Alchemy connections
     warnings.simplefilter(action='ignore', category=UserWarning)
 
-    connection_string = "Driver={SQL Server};Server={VMTEPCLARITY201};Database={CEHDR_Research};trusted_connection=true"
+    connection_string = f"Driver={driver};Server={host};Database={database};trusted_connection=true"
     conn = pyodbc.connect(connection_string)
     print()
 

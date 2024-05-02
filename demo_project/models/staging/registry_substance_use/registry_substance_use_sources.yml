@@ -105,14 +105,13 @@ sources:
           - name: PATIENT_LOC_AT_ORDER
           - name: ATC_CODE
             description: "Anatomical Therapeutic Chemical (ATC) Classification; Codes are maintained by the World Health Organization (WHO)"
-          - name: ATC_TITLE:
+          - name: ATC_TITLE
             description: "Standardized name of medication used by ATC classification (e.g., disregards differences in route, dose, and frequency)"
           - name: START_DATE
             description: "Date medication use was to be begin; For Outpatient mode (ORDERING_MODE_NM) the start date is defined by the order rather than when the patient actually received (e.g., ingested) the medication; For 'Historical Meds' (ORDER_CLASS_NM) the start date may precede the datetime of the order"
           - name: END_DATE
             description: "Date medication use was to end"
           - name: DISCON_TIME
-            description: 
         meta:
           # 1-level of hive-partitioning (YEAR)
           # union_by_name=True --> By default, the schema information is taken from the first Parquet file

@@ -4,6 +4,12 @@ config-version: 2
 
 profile: 'demo_project'
 
+# Modify docs?
+# see https://stackoverflow.com/questions/69266785/dbt-docs-generate-how-to-give-the-specific-branding-to-the-documentation-websi
+
+# SQL preferences
+# see https://docs.getdbt.com/best-practices/how-we-style/2-how-we-style-our-sql
+# see https://docs.getdbt.com/blog/align-with-dbt-project-evaluator
 
 ####################################
 # Where will dbt look for my files?

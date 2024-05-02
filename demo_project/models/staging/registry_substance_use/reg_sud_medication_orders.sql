@@ -1,11 +1,19 @@
-{{ config(materialized='table') }}
+select
+    pat_id,
+    pat_enc_csn_id,
+    order_inst,
 
-SELECT PAT_ID, PAT_ENC_CSN_ID, ORDER_INST, 
-        cast(START_DATE as date) as START_DATE, 
-        cast(END_DATE as date) as END_DATE,
-        DISCON_TIME,
-        ORDERING_MODE_NM, ORDER_STATUS_NM, ORDER_CLASS_NM,
-        ATC_CODE, ATC_TITLE
-FROM {{ source('Substance Use Disorder Registry', 'medications') }}
-WHERE 1=1
-    AND ORDER_STATUS_NM != 'Canceled'
+    cast(start_date as date) as start_date,
+
+    cast(end_date as date) as end_date,
+
+    discon_time,
+    ordering_mode_nm,
+    order_status_nm,
+    order_class_nm,
+    atc_code,
+    atc_title
+
+from {{ source('Substance Use Disorder Registry', 'medications') }}
+
+where order_status_nm != 'Canceled'

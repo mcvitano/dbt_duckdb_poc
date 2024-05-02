@@ -1,68 +1,145 @@
 {{ config(materialized='table') }}
 
+with
 
-with jps_start_encs as (
-    SELECT PAT_ID, PAT_ENC_CSN_ID, DAY_OF_WEEK, YEAR,
-        APPT_TIME, APPT_STATUS_NM, RSN_FOR_VISIT_LIST, OTHER_RSN_LIST,
-        INSURANCE_CLASS
-    FROM {{ ref('reg_sud_encounters') }}
-    WHERE DEPARTMENT_NAME == 'JPS START'
+obot_appts as (
+    select
+        pat_id,
+        pat_enc_csn_id,
+        day_of_week,
+        year,
+        appt_time,
+        appt_status_nm,
+        rsn_for_visit_list,
+        other_rsn_list,
+        insurance_class
+
+    from {{ ref('reg_sud_encounters') }}
+
+    where department_name = 'JPS START'
+
 ),
+
 ed_encs as (
-    SELECT PAT_ID, PAT_ENC_CSN_ID,
-        EMER_ADM_DATE,
-        CASE
-            WHEN INP_ADM_DATE IS NOT NULL THEN 'Y'
-            ELSE 'N'
-        END AS EMER_HOSPITALIZED_YN,
-        HOSP_DISCH_TIME AS EMER_DISCH_TIME,
-        RSN_FOR_VISIT_LIST AS EMER_RSN_VISIT, 
-        OTHER_RSN_LIST AS EMER_RSN_OTHER
-    FROM {{ ref('reg_sud_encounters') }}
-    WHERE EMER_ADM_DATE IS NOT NULL or
-        DEPARTMENT_NAME = 'JPS EMERGENCY' or
-        DEPARTMENT_NAME = 'JPS URGENT CARE CENTER MAIN'
+
+    select
+        pat_id,
+        pat_enc_csn_id,
+        emer_adm_date,
+        hosp_disch_time as emer_disch_time,
+        rsn_for_visit_list as emer_rsn_visit,
+        other_rsn_list as emer_rsn_other,
+
+        case
+            when inp_adm_date is not null then 'y'
+            else 'n'
+        end as emer_hospitalized_yn
+
+    from {{ ref('reg_sud_encounters') }}
+    where
+        emer_adm_date is not null
+        or department_name = 'JPS EMERGENCY'
+        or department_name = 'JPS URGENT CARE CENTER MAIN'
+
 ),
+
 bridge_enrollment as (
-    SELECT PAT_ID,
-        ENROLL_STATUS_NAME AS BRIDGE_STATUS,
-        ENROLL_START_DT AS BRIDGE_START_DATE,
-        ENROLL_END_DT AS BRIDGE_END_DATE
-    FROM {{ source('Substance Use Disorder Registry', 'bridge_enrollment') }}
+
+    select
+        pat_id,
+        enroll_status_name as bridge_status,
+        enroll_start_dt as bridge_start_date,
+        enroll_end_dt as bridge_end_date
+
+    from {{ source('Substance Use Disorder Registry', 'bridge_enrollment') }}
+
 ),
+
 bup_orders as (
-    SELECT PAT_ID, 
-        ORDER_INST AS BUP_PREVIOUS_TIME
-    FROM {{ ref('reg_sud_medication_orders') }}
-    WHERE ATC_CODE IN ('N07BC51', 'N07BC01')
+
+    select
+        pat_id,
+        order_inst as bup_previous_time
+
+    from {{ ref('reg_sud_medication_orders') }}
+
+    where atc_code in ('N07BC51', 'N07BC01')
+
 ),
+
+demographics as (
+
+    select
+        pat_id,
+        age_yrs,
+        sex,
+        raceth,
+        language_primary,
+        relationship_status
+
+    from {{ ref('reg_sud_patients') }}
+
+),
+
 merged_one_to_many as (
-    SELECT obot.PAT_ID, obot.PAT_ENC_CSN_ID, DAY_OF_WEEK, YEAR,
-        APPT_TIME, APPT_STATUS_NM, RSN_FOR_VISIT_LIST, OTHER_RSN_LIST,
-        INSURANCE_CLASS,
-        BUP_PREVIOUS_TIME,
-        EMER_ADM_DATE, EMER_HOSPITALIZED_YN, EMER_DISCH_TIME,
-        EMER_RSN_VISIT, EMER_RSN_OTHER,
-        BRIDGE_STATUS, BRIDGE_START_DATE, BRIDGE_END_DATE,
-        row_number() over(partition by obot.PAT_ENC_CSN_ID order by ed.EMER_ADM_DATE desc) as obot_ed_seq
-    FROM jps_start_encs as obot
-    LEFT JOIN ed_encs as ed
-        ON obot.PAT_ID = ed.PAT_ID
-    LEFT JOIN bridge_enrollment as bridge
-        ON obot.PAT_ID = bridge.PAT_ID
-    LEFT JOIN bup_orders as bup
-        ON obot.PAT_ID = bup.PAT_ID
-    WHERE 1=1
-        AND ed.EMER_ADM_DATE < obot.APPT_TIME
-        AND bup.BUP_PREVIOUS_TIME < obot.APPT_TIME
+
+    select
+        obot_appts.pat_id,
+        obot_appts.pat_enc_csn_id,
+        obot_appts.day_of_week,
+        obot_appts.year,
+        obot_appts.appt_time,
+        obot_appts.appt_status_nm,
+        obot_appts.rsn_for_visit_list,
+        obot_appts.other_rsn_list,
+        obot_appts.insurance_class,
+        bup_orders.bup_previous_time,
+        ed_encs.emer_adm_date,
+        ed_encs.emer_hospitalized_yn,
+        ed_encs.emer_disch_time,
+        ed_encs.emer_rsn_visit,
+        ed_encs.emer_rsn_other,
+        bridge_enrollment.bridge_status,
+        bridge_enrollment.bridge_start_date,
+        bridge_enrollment.bridge_end_date,
+        demographics.age_yrs,
+        demographics.sex,
+        demographics.raceth,
+        demographics.language_primary,
+        demographics.relationship_status,
+        row_number() over (
+            partition by obot_appts.pat_enc_csn_id
+            order by ed_encs.emer_adm_date desc
+        ) as obot_appts_ed_seq
+
+    from obot_appts
+
+    left join ed_encs
+        on obot_appts.pat_id = ed_encs.pat_id
+
+    left join bridge_enrollment
+        on obot_appts.pat_id = bridge_enrollment.pat_id
+
+    left join bup_orders
+        on obot_appts.pat_id = bup_orders.pat_id
+
+    left join demographics
+        on obot_appts.pat_id = demographics.pat_id
+
+    where
+        ed_encs.emer_adm_date < obot_appts.appt_time
+        and bup_orders.bup_previous_time < obot_appts.appt_time
+
+),
+
+-- keep single (previous) ED visit per-obot encounter (in case multiple)
+obot_appts_joined_single_prior_ed as (
+
+    select *
+
+    from merged_one_to_many
+
+    where obot_appts_ed_seq = 1
 )
--- keep single (previous) ED visit per-OBOT encounter (in case multiple)
-SELECT PAT_ID, PAT_ENC_CSN_ID, DAY_OF_WEEK, YEAR,
-        APPT_TIME, APPT_STATUS_NM, RSN_FOR_VISIT_LIST, OTHER_RSN_LIST,
-        INSURANCE_CLASS,
-        BUP_PREVIOUS_TIME,
-        EMER_ADM_DATE, EMER_HOSPITALIZED_YN, EMER_DISCH_TIME,
-        EMER_RSN_VISIT, EMER_RSN_OTHER,
-        BRIDGE_STATUS, BRIDGE_START_DATE, BRIDGE_END_DATE
-FROM merged_one_to_many
-WHERE obot_ed_seq = 1
+
+select * from obot_appts_joined_single_prior_ed

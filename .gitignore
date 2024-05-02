@@ -1,8 +1,17 @@
 dbt_packages/
 logs/
 target/
-# exclude all data
+# ignore all data
 raw_data/
-demo_project/dev.duckdb
+*.duckdb
+*.wal
+# ignore secrets
+*.env
+# ignore notebooks
+*.ipynb
 # no reason to include VS Code workspace (convenience)
 dbt_duckdb.code-workspace
+# ignore basic python artifacts
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class

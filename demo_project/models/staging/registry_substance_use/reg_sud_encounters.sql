@@ -1,87 +1,140 @@
-{{ config(materialized = 'table') }}
+select
+    pat_id,
+    hsp_account_id,
+    pat_enc_csn_id,
 
-SELECT
-    PAT_ID, HSP_ACCOUNT_ID, PAT_ENC_CSN_ID, 
-    cast(CONTACT_DATE as date) as CONTACT_DATE, 
-    dayname(CONTACT_DATE) as DAY_OF_WEEK,
-    YEAR,
-    ENC_TYPE_NM,
-    -- "face-to-face" definition comes from EMR Reporting
-    -- SBIRT added by MCvitano01@jpshealth.org
-    CASE
-        WHEN ENC_TYPE_NM IN (
-            'Initial consult',
-            'Anti-coag visit',
-            'Procedure visit',
-            'Office Visit',
-            'Routine Prenatal',
-            'Initial Prenatal',
-            'Postpartum Visit',
-            'Walk-In',
-            'Nurse Only',
-            'Social Work',
-            'Surgical Consult',
-            'Clinical Support',
-            'Pre-OP Evaluation',
-            'Hospital Encounter',
-            'Appointment',
-            'TH-Phone',
-            'TH-Video',
-            'Telemedicine',
-            'SBIRT') THEN 1
-    END AS FACE_TO_FACE_FLAG, 
-    CASE
-        WHEN ENC_TYPE_NM IN (
-            'TH-Phone',
-            'TH-Video',
-            'Telemedicine') THEN 1
-    END AS TELEHEALTH_FLAG, 
-    DEPARTMENT_NAME, 
-    DEPARTMENT_SPECIALTY,
+    cast(contact_date as date) as contact_date,
+
+    year,
+    enc_type_nm,
+    department_name,
+    department_specialty,
+    appt_time,
+    appt_status_nm,
+    rsn_for_visit_list,
+    other_rsn_list,
+    adt_arrival_time,
+    hosp_admsn_time,
+    inp_adm_date,
+    op_adm_date,
+    emer_adm_date,
+    hosp_disch_time,
+    tot_chgs,
+    visit_prov_id,
+    pcp_prov_id,
+    admission_prov_id,
+    bill_attend_prov_id,
+
+    dayname(contact_date) as day_of_week,
+
+    date_diff('minute', hosp_admsn_time, hosp_disch_time) as hosp_los_mins,
+
+    date_diff('hour', hosp_admsn_time, hosp_disch_time) as hosp_los_hrs,
+
+    date_diff('day', hosp_admsn_time, hosp_disch_time) as hosp_los_days,
+
+    case
+        when
+            adt_arrival_time is not null
+            and hosp_admsn_time is null
+            then 1
+    end as left_before_roomed_flag,
+
+    -- "face-to-face" definition comes from emr reporting
+    -- sbirt added by mcvitano01@jpshealth.org
+    case
+        when
+            enc_type_nm in (
+                'Initial consult',
+                'Anti-coag visit',
+                'Procedure visit',
+                'Office Visit',
+                'Routine Prenatal',
+                'Initial Prenatal',
+                'Postpartum Visit',
+                'Walk-In',
+                'Nurse Only',
+                'Social Work',
+                'Surgical Consult',
+                'Clinical Support',
+                'Pre-OP Evaluation',
+                'Hospital Encounter',
+                'Appointment',
+                'TH-Phone',
+                'TH-Video',
+                'Telemedicine',
+                'SBIRT'
+            )
+            then 1
+    end as face_to_face_flag,
+
+    case
+        when
+            enc_type_nm in (
+                'TH-Phone',
+                'TH-Video',
+                'Telemedicine'
+            )
+            then 1
+    end as telehealth_flag,
+
     -- PCMH list needs to be validated
-    -- Some clinics (e.g., Legacy Health) no longer exist
-    -- Some excluded clinics may qualify as a PCMH (e.g., Welcome Clinic)
-    -- Some included clinics may not qualify (e.g., JPS Southeast General Surgery)
-    CASE
-        WHEN DEPARTMENT_NAME LIKE '%DIAMOND HILL%' THEN 'Diamond Hill'
-        WHEN DEPARTMENT_NAME LIKE '%FAMILY HEALTH%' THEN 'Family Health'
-        WHEN DEPARTMENT_NAME LIKE '%LEGACY HEALTH%' THEN 'Legacy Health'
-        WHEN DEPARTMENT_NAME LIKE '%MAGNOLIA%' THEN 'Magnolia'
-        WHEN DEPARTMENT_NAME LIKE '%NORTHEAST%' THEN 'Northeast'
-        WHEN DEPARTMENT_NAME LIKE '%NORTHWEST%' THEN 'Northwest'
-        WHEN DEPARTMENT_NAME LIKE '%POLYTECHNIC%' THEN 'Polytechnic'
-        WHEN DEPARTMENT_NAME LIKE '%SOUTH CAMPUS%' THEN 'South Campus'
-        WHEN DEPARTMENT_NAME LIKE '%SOUTHEAST%' THEN 'Southeast'
-        WHEN DEPARTMENT_NAME LIKE '%STOP SIX%' THEN 'Stop Six'
-        WHEN DEPARTMENT_NAME LIKE '%TRUE WORTH%' THEN 'True Worth'
-        WHEN DEPARTMENT_NAME LIKE '%VIOLA M PITTS%' THEN 'Viola Pitts'
-        WHEN DEPARTMENT_NAME LIKE '%WATAUGA%' THEN 'Watauga'
-    END AS PCMH_PARENT,
-    APPT_TIME, APPT_STATUS_NM, RSN_FOR_VISIT_LIST, OTHER_RSN_LIST,
-    ADT_ARRIVAL_TIME, HOSP_ADMSN_TIME, 
-    INP_ADM_DATE, OP_ADM_DATE, EMER_ADM_DATE, HOSP_DISCH_TIME,
-    date_diff('minute', HOSP_ADMSN_TIME, HOSP_DISCH_TIME) AS HOSP_LOS_MINS,
-    date_diff('hour', HOSP_ADMSN_TIME, HOSP_DISCH_TIME) AS HOSP_LOS_HRS,
-    date_diff('day', HOSP_ADMSN_TIME, HOSP_DISCH_TIME) AS HOSP_LOS_DAYS,
-    CASE
-        WHEN ADT_ARRIVAL_TIME IS NOT NULL
-            AND HOSP_ADMSN_TIME IS NULL THEN 1
-    END AS LEFT_BEFORE_ROOMED_FLAG,
-    TOT_CHGS,
-    VISIT_PROV_ID, PCP_PROV_ID, ADMISSION_PROV_ID, BILL_ATTEND_PROV_ID,
-    CASE
-        WHEN PRODUCT_TYPE_NM IN ('COMMERCIAL', 'NON-CONTRACTED COMMERCIAL') THEN 'Commercial'
-        WHEN PRODUCT_TYPE_NM IN ('MEDICARE', 'MANAGED MEDICARE') THEN 'Medicare'
-        WHEN PRODUCT_TYPE_NM IN ('MEDICAID', 'MANAGED MEDICAID') THEN 'Medicaid'
-        WHEN PRODUCT_TYPE_NM IN ('CHARITY') THEN 'Hospital-based Medical Assistance'
-        WHEN PRODUCT_TYPE_NM IN ('GRANTS') THEN 'Grants'
-        WHEN PRODUCT_TYPE_NM IN ('GOVERNMENT OTHER') THEN 'Other'
-        -- escape the single-quote (') or it will throw off dbt's compilation step
-        WHEN PRODUCT_TYPE_NM IN ('LIABILITY', 'WORKER''S COMP') THEN 'Liability'
-        WHEN PRODUCT_TYPE_NM IN ('TARRANT COUNTY INMATE') 
-            OR PAYOR_NAME LIKE '%JAIL%' 
-            OR PAYOR_NAME LIKE '%INMATE%' THEN 'Inmate'
-        WHEN PRODUCT_TYPE_NM LIKE '%SELF%' THEN 'Self-pay'
-        ELSE 'Unknown'
-    END AS INSURANCE_CLASS
-FROM {{ source('Substance Use Disorder Registry', 'encounters') }}
+    -- some clinics (e.g., Legacy Health) no longer exist
+    -- some excluded clinics may qualify as a PCMH (e.g., Welcome Clinic)
+    -- some included clinics may not qualify (e.g., Southeast General Surgery)
+    case
+        when department_name like '%diamond hill%'
+            then 'diamond hill'
+        when department_name like '%family health%'
+            then 'family health'
+        when department_name like '%legacy health%'
+            then 'legacy health'
+        when department_name like '%magnolia%'
+            then 'magnolia'
+        when department_name like '%northeast%'
+            then 'northeast'
+        when department_name like '%northwest%'
+            then 'northwest'
+        when department_name like '%polytechnic%'
+            then 'polytechnic'
+        when department_name like '%south campus%'
+            then 'south campus'
+        when department_name like '%southeast%'
+            then 'southeast'
+        when department_name like '%stop six%'
+            then 'stop six'
+        when department_name like '%true worth%'
+            then 'true worth'
+        when department_name like '%viola m pitts%'
+            then 'viola pitts'
+        when department_name like '%watauga%'
+            then 'watauga'
+    end as pcmh_parent,
+
+    case
+        when product_type_nm in ('COMMERCIAL', 'NON-CONTRACTED COMMERCIAL')
+            then 'commercial'
+        when product_type_nm in ('MEDICARE', 'MANAGED MEDICARE')
+            then 'medicare'
+        when product_type_nm in ('MEDICAID', 'MANAGED MEDICAID')
+            then 'medicaid'
+        when product_type_nm in ('CHARITY')
+            then 'hospital-based medical assistance'
+        when product_type_nm in ('GRANTS')
+            then 'grants'
+        when product_type_nm in ('GOVERNMENT OTHER')
+            then 'other'
+        -- escape single-quote (') or it will throw off dbt's compilation step
+        when product_type_nm in ('LIABILITY', 'WORKER''S COMP')
+            then 'liability'
+        when
+            product_type_nm in ('TARRANT COUNTY INMATE')
+            or payor_name like '%jail%'
+            or payor_name like '%inmate%'
+            then 'inmate'
+        when product_type_nm like '%self%'
+            then 'self-pay'
+        else 'unknown'
+    end as insurance_class
+
+from {{ source('Substance Use Disorder Registry', 'encounters') }}

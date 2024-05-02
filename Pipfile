@@ -12,6 +12,10 @@ pyarrow = "*"
 duckcli = "*"
 jupyter = "*"
 nodejs = "*"
+sqlalchemy = "*"
+python-dotenv = "*"
+sqlfluff = "*"
+sqlfluff-templater-dbt = "*"
 
 [dev-packages]
 

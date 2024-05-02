@@ -1,103 +1,137 @@
-{{ config(materialized = 'table') }}
+with
 
-WITH dx_dates_wide AS (
-    SELECT PAT_ID,
-        PAT_ENC_CSN_ID,
-        CURRENT_ICD10_LIST,
-        -- Alcohol
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F10%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Alcohol,
-        -- Opioid
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F11%'
-            OR DX_NAME LIKE '%Opiate%'
-            OR DX_NAME LIKE '%Opioid%'
-            OR DX_NAME LIKE '%Methadone%'
-            OR DX_NAME LIKE '%Heroin%'
-            OR DX_NAME LIKE '%Fentanyl%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Opioid,
-        -- Cannabis
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F12%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Cannabis,
-        -- Sedative
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F13%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Sedative,
-        -- Cocaine
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F14%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Cocaine,
-        -- Other Stimulant (if not Methamphetamine)
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F15%'
-            AND DX_NAME NOT LIKE '%Methamp%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Other_Stimulant,
-        -- Methamphetamine
-        CASE
-            WHEN DX_NAME LIKE '%Methamp%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Methamphetamine,
-        -- Hallucinogen
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F16%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Hallucinogen,
-        -- Nicotine
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F17%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Nicotine,
-        -- Inhalant
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F18%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Inhalant,
-        -- Other Psychoactive (if not opioid or methamphetamine)
-        CASE
-            WHEN CURRENT_ICD10_LIST LIKE '%F19%'
-            AND DX_NAME NOT LIKE '%Opiate%'
-            AND DX_NAME NOT LIKE '%Opioid%'
-            AND DX_NAME NOT LIKE '%Methadone%'
-            AND DX_NAME NOT LIKE '%Heroin%'
-            AND DX_NAME NOT LIKE '%Fentanyl%'
-            AND DX_NAME NOT LIKE '%Methamp%' THEN CONTACT_DATE
-            ELSE NULL
-        END AS Other_Psychoactive
-    FROM {{ source('Substance Use Disorder Registry', 'diagnoses') }}
+diagnosis_dates_wide as (
+
+    select
+        pat_id,
+        pat_enc_csn_id,
+        current_icd10_list,
+
+        -- alcohol
+        case
+            when current_icd10_list like '%F10%'
+                then contact_date
+        end as alcohol,
+
+        -- opioid
+        case
+            when
+                current_icd10_list like '%F11%'
+                or dx_name like '%opiate%'
+                or dx_name like '%opioid%'
+                or dx_name like '%methadone%'
+                or dx_name like '%heroin%'
+                or dx_name like '%fentanyl%'
+                then contact_date
+        end as opioid,
+
+        -- cannabis
+        case
+            when current_icd10_list like '%F12%'
+                then contact_date
+        end as cannabis,
+
+        -- sedative
+        case
+            when current_icd10_list like '%F13%'
+                then contact_date
+        end as sedative,
+
+        -- cocaine
+        case
+            when current_icd10_list like '%F14%'
+                then contact_date
+        end as cocaine,
+
+        -- other stimulant (if not methamphetamine)
+        case
+            when
+                current_icd10_list like '%F15%'
+                and dx_name not like '%methamp%'
+                then contact_date
+        end as other_stimulant,
+
+        -- methamphetamine
+        case
+            when dx_name like '%methamp%'
+                then contact_date
+        end as methamphetamine,
+
+        -- hallucinogen
+        case
+            when current_icd10_list like '%F16%'
+                then contact_date
+        end as hallucinogen,
+
+        -- nicotine
+        case
+            when current_icd10_list like '%F17%'
+                then contact_date
+        end as nicotine,
+
+        -- inhalant
+        case
+            when current_icd10_list like '%F18%'
+                then contact_date
+        end as inhalant,
+
+        -- other psychoactive (if not opioid or methamphetamine)
+        case
+            when
+                current_icd10_list like '%F19%'
+                and dx_name not like '%opiate%'
+                and dx_name not like '%opioid%'
+                and dx_name not like '%methadone%'
+                and dx_name not like '%heroin%'
+                and dx_name not like '%fentanyl%'
+                and dx_name not like '%methamp%'
+                then contact_date
+        end as other_psychoactive
+
+    from {{ source('Substance Use Disorder Registry', 'diagnoses') }}
 ),
--- Un-pivot the data
-unpivoted_dates AS (
-    UNPIVOT dx_dates_wide 
-    ON Alcohol,
-        Opioid,
-        Cannabis,
-        Sedative,
-        Cocaine,
-        Other_Stimulant,
-        Methamphetamine,
-        Hallucinogen,
-        Nicotine,
-        Inhalant,
-        Other_Psychoactive
-    INTO
-        NAME SUBSTANCE_TYPE
-        VALUE DX_DATE
+
+-- un-pivot the diagnosis dates to long-form
+unpivoted_dates as (
+
+    unpivot diagnosis_dates_wide
+
+    on
+    alcohol,
+    opioid,
+    cannabis,
+    sedative,
+    cocaine,
+    other_stimulant,
+    methamphetamine,
+    hallucinogen,
+    nicotine,
+    inhalant,
+    other_psychoactive
+
+    into
+    name substance_type
+    value dx_date
+),
+
+-- format the dx_date field and add an overdose indicator
+formatted_long_diagnosis_dates as (
+
+    select
+        pat_id,
+        pat_enc_csn_id,
+        substance_type,
+        current_icd10_list as icd10,
+
+        cast(dx_date as date) as dx_date,
+
+        case
+            when current_icd10_list like '%T.%'
+                then 'y'
+            else 'n'
+        end as overdose_yn
+
+    from unpivoted_dates
 )
-SELECT PAT_ID,
-    PAT_ENC_CSN_ID,
-    CURRENT_ICD10_LIST AS ICD10,
-    CASE
-        WHEN CURRENT_ICD10_LIST LIKE '%T.%' THEN 'Y'
-        ELSE 'N'
-    END AS OVERDOSE_YN,
-    SUBSTANCE_TYPE,
-    CAST(DX_DATE as date) DX_DATE
-FROM unpivoted_dates
+
+select * from formatted_long_diagnosis_dates

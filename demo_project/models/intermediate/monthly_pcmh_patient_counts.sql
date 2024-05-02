@@ -1,10 +1,15 @@
 {{ config(materialized='view') }}
 
-SELECT 
-    year(cast(CONTACT_DATE as date)) as YEAR,
-    DEPARTMENT_NAME,
-    RACETH,
-    COUNT(*) as UNIQUE_PATIENT_COUNT
-FROM {{ source("Global Registry", 'pcmh_visits_denominators_2018_2023') }}
-GROUP BY CUBE(1, 2, 3)
-ORDER BY (1, 2, 3)
+select
+
+    department_name,
+    raceth,
+    year(cast(contact_date as date)) as contact_year,
+    count(*) as unique_patient_count
+
+from {{ source("Global Registry", 'pcmh_visits_denominators_2018_2023') }}
+
+-- Cube() function yields [ambiguous.column_references] from sqlfluff
+group by cube(1, 2, 3)
+
+order by 1, 2, 3
