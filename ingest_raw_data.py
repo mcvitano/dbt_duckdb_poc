@@ -4,10 +4,9 @@ import argparse
 from pathlib import Path
 from datetime import date
 import os
-import load_dotenv
+import dotenv
 import warnings
 
-from pipeline_utils import pipeline_dict
 
 # Currently implemented as a monolithic script but should be broken into reuseable parts.
 # Perhaps using a dictionary along the lines of:
@@ -25,7 +24,7 @@ from pipeline_utils import pipeline_dict
 #   is poorly organized with a ton of overlapping partial, non-runnable "examples". 
 
 
-load_dotenv()
+dotenv.load_dotenv()
 driver = os.getenv('DRIVER')
 database = os.getenv('DATABASE')
 host = os.getenv('HOST')
@@ -73,7 +72,8 @@ def ingest_raw_data(source, table, current_year_yn):
     if source == 'substance use registry':
         # Create list of tables
         if not table:
-            tables = ['bridge_enrollment', 'diagnoses', 'encounters', 'medications', 'patients']
+            tables = ['bridge_enrollment', 'diagnoses', 'encounters',
+                      'flowsheets', 'medications', 'patients']
         else:
             tables = [table]
    
@@ -105,7 +105,7 @@ def ingest_raw_data(source, table, current_year_yn):
                                         connection=conn,
                                         output_dir=output_dir, 
                                         partition_cols=None)
-                    print(f'     + {source.replace(' ', '_')}.{table} --> disk')
+                    print(f'     + {source.replace(' ', '_')}.{table} ({yr}) --> disk')
 
             # Encounters
             if table == 'encounters':
@@ -131,7 +131,28 @@ def ingest_raw_data(source, table, current_year_yn):
                                         table=f'{table}/YEAR={yr}/{table}', 
                                         connection=conn, output_dir=output_dir,
                                         partition_cols=None)
-                    print(f'     + {source.replace(' ', '_')}.{table} --> disk')
+                    print(f'     + {source.replace(' ', '_')}.{table} ({yr}) --> disk')
+
+            # Flowsheets
+            if table == 'flowsheets':
+                for yr in years_list:
+                    # Create directory to hold parquet partitions
+                    Path.joinpath(output_dir, Path(f'{table}/YEAR={yr}'))\
+                        .mkdir(parents=True, exist_ok=True)
+                    
+                    sql=f"""
+                        SELECT PAT_ID, PAT_ENC_CSN_ID, RECORDED_TIME, ADT_DEPARTMENT_NAME,
+                            FLO_MEAS_ID, FLO_MEAS_NAME, MEAS_VALUE
+                        FROM SUBSTANCE_USE_FLOWSHEETS
+                        WHERE 
+                            FLO_MEAS_ID IN (25822, 907040, 398011)
+                            AND datepart(year, RECORDED_TIME) = {yr}
+                        """
+                    _read_query_to_parquet(sql=sql, 
+                                        table=f'{table}/YEAR={yr}/{table}', 
+                                        connection=conn, output_dir=output_dir,
+                                        partition_cols=None)
+                    print(f'     + {source.replace(' ', '_')}.{table} ({yr}) --> disk')
 
             # Medications
             if table == 'medications':
@@ -154,7 +175,7 @@ def ingest_raw_data(source, table, current_year_yn):
                                         table=f'{table}/YEAR={yr}/{table}', 
                                         connection=conn, output_dir=output_dir,
                                         partition_cols=None)
-                    print(f'     + {source.replace(' ', '_')}.{table} --> disk')
+                    print(f'     + {source.replace(' ', '_')}.{table} ({yr}) --> disk')
 
             # Patients
             if table == 'patients':

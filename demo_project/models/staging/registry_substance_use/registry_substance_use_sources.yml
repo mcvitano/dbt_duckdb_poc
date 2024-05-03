@@ -87,6 +87,21 @@ sources:
           #                         advice as to what the schema is (or we could manually specify it)
           external_location: "read_parquet('../raw_data/substance_use_registry/encounters/*/encounters', hive_partitioning=True, union_by_name=True)"
 
+      - name: flowsheets
+        description: "Scores (only) for the ORT, COWS, and CIWA flowsheet/surveys."
+        tags: ['substance use', 'flowsheets']
+        columns:
+          - name: PAT_ID
+            description: "Unique patient identifier; Value does not represent a medical record number"
+          - name: PAT_ENC_CSN_ID
+          - name: RECORDED_TIME
+          - name: ADT_DEPARTMENT_NAME
+          - name: FLO_MEAS_ID
+          - name: FLO_MEAS_NAME
+          - name: MEAS_VALUE
+        meta:
+          external_location: "read_parquet('../raw_data/substance_use_registry/flowsheets/*/flowsheets', hive_partitioning=True, union_by_name=True)"
+          
       - name: medications
         description: 'Orders for medication assisted treatment for opioid use disorder (Burprenorphine/Suboxone, Naloxone).'
         tags: ['substance use', 'treatment']
